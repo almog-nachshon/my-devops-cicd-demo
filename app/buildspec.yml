@@ -35,7 +35,17 @@ phases:
       - printf '[{"name":"hello-world","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions.json
       - echo Deploying to EKS...
       - aws eks update-kubeconfig --name demo-eks-production --region $AWS_DEFAULT_REGION
-      - helm upgrade --install hello-world-${TAG_NAME#*[-]} ../helmchert \ --namespace ${TAG_NAME##*-} --create-namespace \ -f ../helmchert/values-${TAG_NAME##*-}.yaml \ --set image.tag=$IMAGE_TAG
+      - |
+        # Derive release name and namespace
+        ENV=${TAG_NAME##*-}
+        RELEASE=hello-world-$ENV
+
+        # Run Helm upgrade/install
+        helm upgrade --install $RELEASE ../helmchert \
+          --namespace $ENV \
+          --create-namespace \
+          -f ../helmchert/values-${ENV}.yaml \
+          --set image.tag=$IMAGE_TAG
 artifacts:
   files:
     - imagedefinitions.json
