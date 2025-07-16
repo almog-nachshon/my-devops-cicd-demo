@@ -1,19 +1,19 @@
 # .github/workflows/ci-cd.yaml
 name: CI/CD Pipeline
 
-# Trigger on version tags for dev, test, prod
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*-dev'
+      - 'v*.*.*-test'
+      - 'v*.*.*-prod'
 
 jobs:
   build_push_and_deploy:
-    if: startsWith(github.ref, 'refs/tags/v') && (github.ref_name =~ '^v[0-9]+\.[0-9]+\.[0-9]+-(dev|test|prod)$')
-    runs-on: ubuntu-latest
+        runs-on: ubuntu-latest
     permissions:
-      id-token: write         # allows OIDC
-      contents: read          # for checkout
+      id-token: write 
+      contents: read 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,14 +39,12 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & Push Docker image from app/
+      - name: Build & Push Docker image from app directory
         run: |
           cd app
           IMAGE=485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo:${{ steps.vars.outputs.IMAGE_TAG }}
-          docker build -t $IMAGE . # uses app/Dockerfile & .dockerignore
+          docker build --build-arg VERSION=$(cat version.txt) -t $IMAGE .
           docker push $IMAGE
-
-
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name demo-eks-production --region eu-north-1
