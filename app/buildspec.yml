@@ -1,0 +1,22 @@
+version: 0.2
+env:
+  variables:
+    ECR_REPO: 485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION \ | docker login --username AWS --password-stdin $ECR_REPO
+      - VERSION=$(cat version.txt)
+      - SHORT_SHA=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
+      - IMAGE_TAG="$VERSION-$SHORT_SHA"
+      - echo "Building image tag $IMAGE_TAG"
+  build:
+    commands:
+      - docker build --build-arg VERSION=$VERSION -t $ECR_REPO:$IMAGE_TAG .
+  post_build:
+    commands:
+      - docker push $ECR_REPO:$IMAGE_TAG
+      - printf '[{"name":"hello-world","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG \ > imagedefinitions.json
+artifacts:
+  files:
+    - imagedefinitions.json

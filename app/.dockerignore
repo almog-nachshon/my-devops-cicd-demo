@@ -1,0 +1,7 @@
+# Ignore everything...
+**
+
+# ...then allow just these three
+!Dockerfile
+!hello_world.py
+!version.txt

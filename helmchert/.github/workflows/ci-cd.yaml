@@ -1,0 +1,32 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [ dev, test, prod ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Authenticate to EKS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::485701710361:role/GitHubActionsRole
+          aws-region: eu-north-1
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name demo-eks-production --region eu-north-1
+
+      - name: Deploy to ${{ matrix.env }}
+        run: |
+          helm upgrade --install hello-world-${{ matrix.env }} ./helmchart \
+            --namespace ${{ matrix.env }} --create-namespace \
+            -f ./helmchart/values-${{ matrix.env }}.yaml
