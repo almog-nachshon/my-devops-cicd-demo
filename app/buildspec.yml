@@ -1,28 +1,33 @@
 version: 0.2
-
 env:
   variables:
     ECR_REPO: 485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo
-
 phases:
+  install:
+    commands:
+      - echo Installing kubectl...
+      - curl -sSL -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.33.0/2025-06-12/bin/linux/amd64/kubectl
+      - chmod +x kubectl && mv kubectl /usr/local/bin/
+      - echo Installing Helm...
+      - curl -sSL -o helm.tar.gz https://get.helm.sh/helm-v3.12.0-linux-amd64.tar.gz
+      - tar -zxvf helm.tar.gz
+      - mv linux-amd64/helm /usr/local/bin/
+      - helm version
   pre_build:
     commands:
       - echo Logging in to ECR...
       - LOGIN_PASSWORD=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
       - echo "$LOGIN_PASSWORD" | docker login --username AWS --password-stdin $ECR_REPO
       - echo Determining version from tag...
-      # CODEBUILD_WEBHOOK_TRIGGER will be like "refs/tags/v0.0.5-dev"
       - TAG_NAME=${CODEBUILD_WEBHOOK_TRIGGER##*/}
       - echo "Parsed TAG_NAME=$TAG_NAME"
       - IMAGE_TAG=$TAG_NAME
       - echo "Building Docker image with tag $IMAGE_TAG"
-
   build:
     commands:
       - echo Building Docker image...
       - cd app
       - docker build --build-arg VERSION=$IMAGE_TAG -t $ECR_REPO:$IMAGE_TAG .
-
   post_build:
     commands:
       - echo Pushing Docker image...
@@ -30,11 +35,7 @@ phases:
       - printf '[{"name":"hello-world","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions.json
       - echo Deploying to EKS...
       - aws eks update-kubeconfig --name demo-eks-production --region $AWS_DEFAULT_REGION
-      - helm upgrade --install hello-world-${TAG_NAME#*[-]} ../helmchert \
-          --namespace ${TAG_NAME##*-} --create-namespace \
-          -f ../helmchert/values-${TAG_NAME##*-}.yaml \
-          --set image.tag=$IMAGE_TAG
-
+      - helm upgrade --install hello-world-${TAG_NAME#*[-]} ../helmchert \ --namespace ${TAG_NAME##*-} --create-namespace \ -f ../helmchert/values-${TAG_NAME##*-}.yaml \ --set image.tag=$IMAGE_TAG
 artifacts:
   files:
     - imagedefinitions.json
