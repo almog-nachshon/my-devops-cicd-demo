@@ -1,22 +1,28 @@
 version: 0.2
+
 env:
   variables:
     ECR_REPO: 485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo
+
 phases:
   pre_build:
     commands:
       - echo Logging in to ECR...
       - LOGIN_PASSWORD=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
       - echo "$LOGIN_PASSWORD" | docker login --username AWS --password-stdin $ECR_REPO
-      - VERSION=$(cat version.txt)
-      - SHORT_SHA=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
-      - IMAGE_TAG="$VERSION-$SHORT_SHA"
-      - echo "Building image tag $IMAGE_TAG"
+      - echo Determining version from tag...
+      # CODEBUILD_WEBHOOK_TRIGGER will be like "refs/tags/v0.0.5-dev"
+      - TAG_NAME=${CODEBUILD_WEBHOOK_TRIGGER##*/}
+      - echo "Parsed TAG_NAME=$TAG_NAME"
+      - IMAGE_TAG=$TAG_NAME
+      - echo "Building Docker image with tag $IMAGE_TAG"
+
   build:
     commands:
       - echo Building Docker image...
       - cd app
-      - docker build --build-arg VERSION=$VERSION -t $ECR_REPO:$IMAGE_TAG .
+      - docker build --build-arg VERSION=$IMAGE_TAG -t $ECR_REPO:$IMAGE_TAG .
+
   post_build:
     commands:
       - echo Pushing Docker image...
@@ -24,7 +30,11 @@ phases:
       - printf '[{"name":"hello-world","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions.json
       - echo Deploying to EKS...
       - aws eks update-kubeconfig --name demo-eks-production --region $AWS_DEFAULT_REGION
-      - helm upgrade --install hello-world-prod ../helmchert \ --namespace prod --create-namespace \ -f ../helmchert/values-prod.yaml \ --set image.tag=$IMAGE_TAG
+      - helm upgrade --install hello-world-${TAG_NAME#*[-]} ../helmchert \
+          --namespace ${TAG_NAME##*-} --create-namespace \
+          -f ../helmchert/values-${TAG_NAME##*-}.yaml \
+          --set image.tag=$IMAGE_TAG
+
 artifacts:
   files:
     - imagedefinitions.json
