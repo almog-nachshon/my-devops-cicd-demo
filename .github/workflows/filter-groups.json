@@ -1,0 +1,7 @@
+[
+    [
+      { "type": "EVENT",    "pattern": "PUSH" },
+      { "type": "HEAD_REF", "pattern": "refs/tags/v*" }
+    ]
+  ]
+  

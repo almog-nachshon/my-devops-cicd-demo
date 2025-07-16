@@ -8,55 +8,37 @@ on:
       - 'v*.*.*-prod'
 
 jobs:
-  build_push_and_deploy:
+  kickoff_codebuild:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-      contents: read
+      id-token: write         # for OIDC
+      contents: read          # to clone the repo
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract tag & environment
-        id: vars
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          echo "IMAGE_TAG=$TAG" >> $GITHUB_OUTPUT
-          case "$TAG" in
-            *-dev) ENV=dev ;; 
-            *-test) ENV=test ;; 
-            *-prod) ENV=prod ;; 
-          esac
-          echo "ENV=$ENV" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Start AWS CodeBuild
+        id: codebuild
+        uses: aws-actions/aws-codebuild-run-build@v2
         with:
-          role-to-assume: arn:aws:iam::485701710361:role/github-actions-role
-          aws-region: eu-north-1
+          project-name: devops-build
+          # Pass along the Git tag so CodeBuild can pick it up if you like
+          environment-variables: |
+            TAG=${{ github.ref_name }}
+        # Use the same OIDC role you set up earlier
+        env:
+          AWS_REGION: eu-north-1
+          AWS_ROLE_TO_ASSUME: arn:aws:iam::485701710361:role/github-actions-role
 
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build & Push Docker image from app folder
-        run: |
-          cd app
-          IMAGE=485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo:${{ steps.vars.outputs.IMAGE_TAG }}
-          docker build -t $IMAGE .
-          docker push $IMAGE
-
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --name demo-eks-production --region eu-north-1
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-
-      - name: Deploy Helm chart to ${{ steps.vars.outputs.ENV }}
-        run: |
-          ENV=${{ steps.vars.outputs.ENV }}
-          IMAGE_TAG=${{ steps.vars.outputs.IMAGE_TAG }}
-          helm upgrade --install hello-world-$ENV ./helmchert \
-            --namespace $ENV --create-namespace \
-            -f ./helmchert/values-$ENV.yaml \
-            --set image.tag=$IMAGE_TAG
+  wait_for_completion:
+    needs: kickoff_codebuild
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CodeBuild to finish
+        uses: aws-actions/aws-codebuild-run-build@v2
+        with:
+          project-name: devops-build
+          wait-for-completion: true
+        env:
+          AWS_REGION: eu-north-1
+          AWS_ROLE_TO_ASSUME: arn:aws:iam::485701710361:role/github-actions-role

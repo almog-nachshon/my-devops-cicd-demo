@@ -5,18 +5,26 @@ env:
 phases:
   pre_build:
     commands:
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION \ | docker login --username AWS --password-stdin $ECR_REPO
+      - echo Logging in to ECR...
+      - LOGIN_PASSWORD=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
+      - echo "$LOGIN_PASSWORD" | docker login --username AWS --password-stdin $ECR_REPO
       - VERSION=$(cat version.txt)
       - SHORT_SHA=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
       - IMAGE_TAG="$VERSION-$SHORT_SHA"
       - echo "Building image tag $IMAGE_TAG"
   build:
     commands:
+      - echo Building Docker image...
+      - cd app
       - docker build --build-arg VERSION=$VERSION -t $ECR_REPO:$IMAGE_TAG .
   post_build:
     commands:
+      - echo Pushing Docker image...
       - docker push $ECR_REPO:$IMAGE_TAG
-      - printf '[{"name":"hello-world","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG \ > imagedefinitions.json
+      - printf '[{"name":"hello-world","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions.json
+      - echo Deploying to EKS...
+      - aws eks update-kubeconfig --name demo-eks-production --region $AWS_DEFAULT_REGION
+      - helm upgrade --install hello-world-prod ../helmchert \ --namespace prod --create-namespace \ -f ../helmchert/values-prod.yaml \ --set image.tag=$IMAGE_TAG
 artifacts:
   files:
     - imagedefinitions.json
