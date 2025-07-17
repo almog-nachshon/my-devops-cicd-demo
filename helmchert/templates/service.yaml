@@ -5,9 +5,10 @@ metadata:
   labels:
     app: {{ include "hello-world.name" . }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   selector:
     app: {{ include "hello-world.name" . }}
   ports:
-  - port: {{ .Values.service.port }}
-    targetPort: 80
+    - name: http
+      port: 80
+      targetPort: 80
