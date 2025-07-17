@@ -4,8 +4,10 @@ image:
   repository: 485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo
   tag: "1.0.0-<SHA>"
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
+ingress:
+  enabled: true
 resources: {}
 autoscaling:
   enabled: true
