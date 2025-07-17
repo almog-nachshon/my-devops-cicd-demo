@@ -8,11 +8,11 @@ module "eks" {
   subnet_ids                 = module.vpc.private_subnets
 
   # Restrict API endpoint to private subnets
-  cluster_endpoint_public_access        = true
-  cluster_endpoint_public_access_cidrs = ["77.127.166.203/32"]
-  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access        = false
+  cluster_endpoint_public_access_cidrs = ["83.130.129.15/32"]
 
-  # Enable IAM Roles for Service Accounts (IRSA)
+
+  cluster_endpoint_private_access = true
   enable_irsa                = true
 
 
