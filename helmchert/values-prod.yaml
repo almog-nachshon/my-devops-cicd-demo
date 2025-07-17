@@ -4,8 +4,9 @@ image:
   repository: 485701710361.dkr.ecr.eu-north-1.amazonaws.com/my-devops-cicd-demo
   tag: "1.0.0-<SHA>"
 service:
-  type: ClusterIP
   port: 80
+  targetPort: 80
+  type: ClusterIP
 ingress:
   enabled: true
 resources: {}

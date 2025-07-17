@@ -2,13 +2,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "hello-world.fullname" . }}
-  labels:
-    app: {{ include "hello-world.name" . }}
 spec:
   type: ClusterIP
   selector:
     app: {{ include "hello-world.name" . }}
   ports:
-    - name: http
-      port: 80
-      targetPort: 80
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default 80 }}
