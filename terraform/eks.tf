@@ -8,8 +8,11 @@ module "eks" {
   subnet_ids                 = module.vpc.private_subnets
 
   # Restrict API endpoint to private subnets
-  cluster_endpoint_public_access        = false
-  cluster_endpoint_public_access_cidrs = ["83.130.129.15/32"]
+  cluster_endpoint_public_access        = true
+  cluster_endpoint_public_access_cidrs = [
+  "83.130.129.15/32",             
+  "51.21.147.124/32"     
+  ]
 
 
   cluster_endpoint_private_access = true
@@ -19,7 +22,7 @@ module "eks" {
   # Managed node groups definition
   eks_managed_node_groups = {
     standard = {
-      desired_capacity = 2
+      desired_capacity = 1
       max_capacity     = 4
       min_capacity     = 1
       instance_types   = ["t3.medium"]
