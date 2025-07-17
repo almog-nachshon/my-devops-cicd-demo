@@ -5,8 +5,8 @@ metadata:
   name: {{ include "hello-world.fullname" . }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
     kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
 spec:
   ingressClassName: alb
   rules:
