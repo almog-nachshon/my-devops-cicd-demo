@@ -169,7 +169,5 @@ Open `http://<ALB_DNS>/`.
 | ECR                      |![ECR Images](docs/ecr.png)|
 | ALB Ingress              |![ALB Ingress](docs/alb-app.png)|
 
-## License
 
-This project is licensed under the MIT License. Feel free to reuse and adapt!
 
