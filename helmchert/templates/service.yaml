@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: {{ include "hello-world.fullname" . }}
 spec:
-  type: ClusterIP
+  type: NodePort 
   selector:
     app: {{ include "hello-world.name" . }}
   ports:
